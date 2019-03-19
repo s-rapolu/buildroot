@@ -9,6 +9,12 @@ config BR2_PACKAGE_EXPLORA_SDK
 
 if BR2_PACKAGE_EXPLORA_SDK
 
+config BR2_PACKAGE_NEXUS_SAGE_PATH
+    string "SAGE Path"
+    default "/usr/bin/"
+    help
+        Sage binaries path
+
 config BR2_PACKAGE_PROVIDES_NEXUS
 	default "explora-sdk"
 
@@ -21,5 +27,9 @@ config BR2_PACKAGE_PROVIDES_LIBGLES
 config BR2_PACKAGE_SDK_INSTALL
         string 
 	default "explora-sdk"
+
+config BR2_PACKAGE_PROVIDES_NEXUS_SAGE
+	default "explora-sdk"
+	
 
 endif

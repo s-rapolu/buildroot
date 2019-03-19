@@ -23,11 +23,11 @@ define UMA_SDK_INSTALL_STAGING_CMDS
 endef
 
 define UMA_SDK_INSTALL_TARGET_CMDS
-	mkdir -p  $(TARGET_DIR)$(BR2_PACKAGE_BCM_REFSW_SAGE_PATH)
+	mkdir -p  $(TARGET_DIR)$(BR2_PACKAGE_NEXUS_SAGE_PATH)
 	mkdir -p  $(TARGET_DIR)/lib/modules/misc
 	$(INSTALL) -m 0755 -D $(@D)/usr/lib/Player/* $(TARGET_DIR)/usr/lib/
 	$(INSTALL) -m 0755 -D $(@D)/qorvo/gpK5.ko ${TARGET_DIR}/lib/modules/misc
-	$(INSTALL) -D -m 0644 $(@D)/firmware/sage/* $(TARGET_DIR)/$(BR2_PACKAGE_BCM_REFSW_SAGE_PATH)/
+	$(INSTALL) -D -m 0644 $(@D)/firmware/sage/* $(TARGET_DIR)/$(BR2_PACKAGE_NEXUS_SAGE_PATH)/
 endef
 
 define QORVO_BUILD_MODULE

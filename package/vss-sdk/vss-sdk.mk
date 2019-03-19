@@ -106,18 +106,20 @@ define VSS_SDK_WRONG_PKG
 endef
 
 define VSS_SDK_BUILD_CMDS
- $(call VSS_WRITE_FLAGS)
- $(call VSS_EXCLUDE_PACKAGE_LIST)
 endef
 
 define VSS_SDK_INSTALL_STAGING_CMDS
-    cp -av ${@D}/usr ${STAGING_DIR}
-    cp -av ${@D}/etc ${STAGING_DIR}
+    cp -a ${@D}/usr ${STAGING_DIR}
+    cp -a ${@D}/etc ${STAGING_DIR}
+    cp -a ${@D}/lib ${STAGING_DIR}
 endef
 
 define VSS_SDK_INSTALL_TARGET_CMDS
-    cp -av ${@D}/usr/lib/lib*.so* ${STAGING_DIR}/usr/lib
-    cp -av ${@D}/etc ${TARGET_DIR}
+    mkdir -p  $(TARGET_DIR)$(BR2_PACKAGE_NEXUS_SAGE_PATH)
+    cp -a ${@D}/usr/lib/lib*.so* ${STAGING_DIR}/usr/lib
+    cp -a ${@D}/etc ${TARGET_DIR}
+    cp -a ${@D}/lib ${TARGET_DIR}
+    $(INSTALL) -D -m 0644 $(@D)/sage/* $(TARGET_DIR)/$(BR2_PACKAGE_NEXUS_SAGE_PATH)/
 endef
 
 $(eval $(generic-package))

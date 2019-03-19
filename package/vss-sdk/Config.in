@@ -17,6 +17,16 @@ config BR2_PACKAGE_VSS_SDK_MOVE_GSTREAMER
 	help
 	  Move g-streamer to a other location
 
+config BR2_PACKAGE_NEXUS_SAGE_PATH
+    string "SAGE Path"
+    default "/usr/bin/"
+    help
+        Sage binaries path
+
+config BR2_PACKAGE_SDK_INSTALL
+    string 
+	default "vss-sdk"
+
 config BR2_PACKAGE_PROVIDES_LIBEGL
 	default "vss-sdk"
 
@@ -37,4 +47,5 @@ config BR2_PACKAGE_PROVIDES_OPUS_DECODER
 
 config BR2_PACKAGE_PROVIDES_NEXUS_SAGE
 	default "vss-sdk"
+
 endif

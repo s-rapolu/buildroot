@@ -148,21 +148,26 @@ config BR2_PACKAGE_BCM_REFSW_SAGE
 	help
 	  Add SAGE support in Nexus.
 
-config BR2_PACKAGE_BCM_REFSW_SAGE_PATH
+if BR2_PACKAGE_BCM_REFSW_SAGE
+config BR2_PACKAGE_PROVIDES_NEXUS_SAGE
+	default "bcm-refsw"
+endif
+
+config BR2_PACKAGE_NEXUS_SAGE_PATH
         string "SAGE Path"
         default "/usr/bin/"
         depends on BR2_PACKAGE_BCM_REFSW_SAGE
 	help
 	  Sage binaries path
 
-config BR2_PACKAGE_BCM_REFSW_PAK_PATH
+config BR2_PACKAGE_NEXUS_PAK_PATH
         string "PAK Path"
         default "/usr/bin/"
         depends on BR2_PACKAGE_BCM_REFSW_18_2
 	help
 	  PAK binaries path
 
-config BR2_PACKAGE_BCM_REFSW_DRM_PATH
+config BR2_PACKAGE_NEXUS_DRM_PATH
         string "DRM Path"
         default "/usr/bin/"
         depends on BR2_PACKAGE_BCM_REFSW_18_2
