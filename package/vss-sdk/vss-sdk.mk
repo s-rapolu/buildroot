@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-VSS_SDK_VERSION = c1484feb9cedf7ffcd4aeb89b69a20e24596d8d1
+VSS_SDK_VERSION = 6df72498291320411dc7cc90dee2c3105f9461ae
 VSS_SDK_SITE = git@github.com:Metrological/SDK_VSS.git
 VSS_SDK_SITE_METHOD = git
 VSS_SDK_LICENSE = PROPRIETARY
@@ -114,12 +114,34 @@ define VSS_SDK_INSTALL_STAGING_CMDS
     cp -a ${@D}/lib ${STAGING_DIR}
 endef
 
+define VSS_SDK_INSTALL_INITD
+     mkdir -p $(TARGET_DIR)/etc/init.d
+
+     sed -e 's;%SAGEPATH%;$(BR2_PACKAGE_NEXUS_SAGE_PATH);g' \
+	 -e 's;%IRMODE%;16;g' \
+	 -e 's;%BOXMODE%;1;g' \
+	 -e 's;%GRAPHICS_HEAP_SIZE%;100000000;g' \
+	 -e 's;%NXSERVERARGS%;$(BR2_PACKAGE_VSS_SDK_NXSERVER_ARGS);g' \
+	 $(@D)/templates/nxserver.in > $(@D)/nxserver.env 
+
+     $(INSTALL) -m 0755  $(@D)/nxserver.env $(TARGET_DIR)/etc
+     $(INSTALL) -m 0755  $(@D)/init.d/* $(TARGET_DIR)/etc/init.d
+endef
+
 define VSS_SDK_INSTALL_TARGET_CMDS
-    mkdir -p  $(TARGET_DIR)$(BR2_PACKAGE_NEXUS_SAGE_PATH)
-    cp -a ${@D}/usr/lib/lib*.so* ${STAGING_DIR}/usr/lib
+    cp -a ${@D}/usr/lib/lib*.so* ${TARGET_DIR}/usr/lib
+    cp -a ${@D}/usr/bin/* ${TARGET_DIR}/usr/bin
+    cp -a ${@D}/usr/sbin/* ${TARGET_DIR}/usr/sbin
     cp -a ${@D}/etc ${TARGET_DIR}
     cp -a ${@D}/lib ${TARGET_DIR}
+
+    mkdir -p  $(TARGET_DIR)$(BR2_PACKAGE_NEXUS_SAGE_PATH)
     $(INSTALL) -D -m 0644 $(@D)/sage/* $(TARGET_DIR)/$(BR2_PACKAGE_NEXUS_SAGE_PATH)/
 endef
+
+
+ifeq ($(BR2_PACKAGE_VSS_SDK_INSTALL_INITD),y)
+	VSS_SDK_POST_INSTALL_TARGET_HOOKS += VSS_SDK_INSTALL_INITD
+endif
 
 $(eval $(generic-package))
