@@ -3,7 +3,7 @@
 # spark
 #
 ################################################################################
-SPARK_VERSION = 2cf8a884fa31f263c15ad9ab88127f7ed914e863
+SPARK_VERSION = 3c2d4ee8d688c59ef5a1f9e40871cf2eb877b4f2
 SPARK_SITE_METHOD = git
 SPARK_SITE = git://github.com/HaseenaSainul/pxCore
 SPARK_INSTALL_STAGING = YES
@@ -55,20 +55,22 @@ define SPARK_INSTALL_LIBS
     $(INSTALL) -m 755 $(@D)/build/egl/libpxCore.so $(1)/usr/lib/
 endef
 
+SPARK_TARGET_DATA_PATH = /usr/share/WPEFramework/Spark
+
 define SPARK_INSTALL_DEPS
-    mkdir -p $(TARGET_DIR)/root/spark
-    cp -ar $(@D)/examples/pxScene2d/src/node_modules $(TARGET_DIR)/root/spark/
-    $(INSTALL) -m 755 $(@D)/examples/pxScene2d/src/*.js $(TARGET_DIR)/root/spark/
-    $(INSTALL) -m 755 $(@D)/examples/pxScene2d/src/*.json $(TARGET_DIR)/root/spark/
-    $(INSTALL) -m 755 $(@D)/examples/pxScene2d/src/*.ttf $(TARGET_DIR)/root/spark/
-    $(INSTALL) -m 755 $(@D)/examples/pxScene2d/src/sparkpermissions.conf $(TARGET_DIR)/root/spark/
-    $(INSTALL) -m 755 $(@D)/examples/pxScene2d/src/waylandregistry.conf $(TARGET_DIR)/root/spark/
-    cp -ar $(@D)/examples/pxScene2d/src/rcvrcore $(TARGET_DIR)/root/spark/
-    cp -ar $(@D)/examples/pxScene2d/src/browser $(TARGET_DIR)/root/spark/
-    cp -ar $(@D)/examples/pxScene2d/src/optimus $(TARGET_DIR)/root/spark/
-    cp -ar $(@D)/examples/pxScene2d/src/duk_modules $(TARGET_DIR)/root/spark/
-    cp -ar $(@D)/examples/pxScene2d/src/v8_modules $(TARGET_DIR)/root/spark/
-    cp -ar $(@D)/examples/pxScene2d/src/rasterizer $(TARGET_DIR)/root/spark/
+    mkdir -p $(TARGET_DIR)/$(SPARK_TARGET_DATA_PATH)
+    cp -ar $(@D)/examples/pxScene2d/src/node_modules $(TARGET_DIR)/$(SPARK_TARGET_DATA_PATH)/
+    $(INSTALL) -m 755 $(@D)/examples/pxScene2d/src/*.js $(TARGET_DIR)/$(SPARK_TARGET_DATA_PATH)/
+    $(INSTALL) -m 755 $(@D)/examples/pxScene2d/src/*.json $(TARGET_DIR)/$(SPARK_TARGET_DATA_PATH)/
+    $(INSTALL) -m 755 $(@D)/examples/pxScene2d/src/*.ttf $(TARGET_DIR)/$(SPARK_TARGET_DATA_PATH)/
+    $(INSTALL) -m 755 $(@D)/examples/pxScene2d/src/sparkpermissions.conf $(TARGET_DIR)/$(SPARK_TARGET_DATA_PATH)/
+    $(INSTALL) -m 755 $(@D)/examples/pxScene2d/src/waylandregistry.conf $(TARGET_DIR)/$(SPARK_TARGET_DATA_PATH)/
+    cp -ar $(@D)/examples/pxScene2d/src/rcvrcore $(TARGET_DIR)/$(SPARK_TARGET_DATA_PATH)/
+    cp -ar $(@D)/examples/pxScene2d/src/browser $(TARGET_DIR)/$(SPARK_TARGET_DATA_PATH)/
+    cp -ar $(@D)/examples/pxScene2d/src/optimus $(TARGET_DIR)/$(SPARK_TARGET_DATA_PATH)/
+    cp -ar $(@D)/examples/pxScene2d/src/duk_modules $(TARGET_DIR)/$(SPARK_TARGET_DATA_PATH)/
+    cp -ar $(@D)/examples/pxScene2d/src/v8_modules $(TARGET_DIR)/$(SPARK_TARGET_DATA_PATH)/
+    cp -ar $(@D)/examples/pxScene2d/src/rasterizer $(TARGET_DIR)/$(SPARK_TARGET_DATA_PATH)/
 endef
 
 ifeq ($(BR2_PACKAGE_SPARK_LIB), y)
