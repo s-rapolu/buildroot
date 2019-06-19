@@ -1,0 +1,14 @@
+--- a/libdropbear.pc.in	1970-01-01 05:30:00.000000000 +0530
++++ b/libdropbear.pc.in	2019-06-06 21:49:56.122986983 +0530
+@@ -0,0 +1,11 @@
++prefix=@prefix@
++exec_prefix=@exec_prefix@
++libdir=@libdir@
++includedir=@includedir@
++
++Name: libdropbear
++Version: @PACKAGE_VERSION@
++Description: Dropbear SSH
++URL: http://matt.ucc.asn.au/dropbear/releases
++Libs: -L${libdir} -ldropbear
++Cflags: -I${includedir}

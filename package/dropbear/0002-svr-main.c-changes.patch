@@ -1,0 +1,181 @@
+--- a/svr-main.c	2016-07-21 20:47:09.000000000 +0530
++++ b/svr-main.c	2019-06-18 20:58:34.023322679 +0530
+@@ -30,19 +30,27 @@
+ #include "runopts.h"
+ #include "dbrandom.h"
+ #include "crypto_desc.h"
++#include <pthread.h>
++#include "libdropbear.h"
+ 
+ static size_t listensockets(int *sock, size_t sockcount, int *maxfd);
+ static void sigchld_handler(int dummy);
+ static void sigsegv_handler(int);
+ static void sigintterm_handler(int fish);
++
++static int pluginActivated;
++static pthread_t threadID;
++void init_dropbear(int argc, char ** argv);
++
+ #ifdef INETD_MODE
+ static void main_inetd(void);
+ #endif
+ #ifdef NON_INETD_MODE
+-static void main_noinetd(void);
++static void* main_noinetd(void *);
+ #endif
+ static void commonsetup(void);
+ 
++#if 0
+ #if defined(DBMULTI_dropbear) || !defined(DROPBEAR_MULTI)
+ #if defined(DBMULTI_dropbear) && defined(DROPBEAR_MULTI)
+ int dropbear_main(int argc, char ** argv)
+@@ -75,6 +83,55 @@
+ 	return -1;
+ }
+ #endif
++#endif
++void init_dropbear(int argc, char ** argv)
++{
++	 _dropbear_exit = svr_dropbear_exit;
++        _dropbear_log = svr_dropbear_log;
++
++        disallow_core();
++
++        /* get commandline options */
++        svr_getopts(argc, argv);
++         /* Note: commonsetup() must happen before we daemon()ise. Otherwise
++           daemon() will chdir("/"), and we won't be able to find local-dir
++           hostkeys. */
++        commonsetup();
++}
++
++void activate_dropbear(int argc, char ** argv)
++{
++	int status;
++	int i;
++
++	if(pluginActivated == 1)
++	{
++		printf("Plugin already Activated \n");
++		return;
++	}
++
++	init_dropbear(argc, argv);
++	status = pthread_create(&threadID,NULL,main_noinetd,NULL);
++	if(status != 0)
++        {
++        	printf("Error in creating thread\n");
++                return;
++        }
++        printf("Plugin Activated \n");
++        pluginActivated =1;
++}
++
++void deactivate_dropbear()
++{
++	if(pluginActivated == 1)
++        {
++        	exitflag =1;
++                pthread_join(threadID, 0);
++                pluginActivated = 0;
++        }
++        printf("Plugin DeActivated \n");
++	return;
++}
+ 
+ #ifdef INETD_MODE
+ static void main_inetd() {
+@@ -104,7 +161,7 @@
+ #endif /* INETD_MODE */
+ 
+ #ifdef NON_INETD_MODE
+-static void main_noinetd() {
++static void* main_noinetd(void *UNUSED(unused)){
+ 	fd_set fds;
+ 	unsigned int i, j;
+ 	int val;
+@@ -118,11 +175,7 @@
+ 
+ 	int childsock;
+ 	int childpipe[2];
+-
+-	/* Note: commonsetup() must happen before we daemon()ise. Otherwise
+-	   daemon() will chdir("/"), and we won't be able to find local-dir
+-	   hostkeys. */
+-	commonsetup();
++	struct timeval timeout;
+ 
+ 	/* sockets to identify pre-authenticated clients */
+ 	for (i = 0; i < MAX_UNAUTH_CLIENTS; i++) {
+@@ -141,6 +194,7 @@
+ 		FD_SET(listensocks[i], &fds);
+ 	}
+ 
++#if 0
+ 	/* fork */
+ 	if (svr_opts.forkbg) {
+ 		int closefds = 0;
+@@ -153,7 +207,7 @@
+ 			dropbear_exit("Failed to daemonize: %s", strerror(errno));
+ 		}
+ 	}
+-
++#endif
+ 	/* should be done after syslog is working */
+ 	if (svr_opts.forkbg) {
+ 		dropbear_log(LOG_INFO, "Running in background");
+@@ -168,6 +222,8 @@
+ 		fclose(pidfile);
+ 	}
+ 
++	timeout.tv_sec = 5;
++	timeout.tv_usec = 0;
+ 	/* incoming connection select loop */
+ 	for(;;) {
+ 
+@@ -186,11 +242,18 @@
+ 			}
+ 		}
+ 
+-		val = select(maxsock+1, &fds, NULL, NULL, NULL);
++		val = select(maxsock+1, &fds, NULL, NULL, &timeout);
+ 
+ 		if (exitflag) {
+ 			unlink(svr_opts.pidfile);
+-			dropbear_exit("Terminated by signal");
++			//dropbear_exit("Terminated by signal");
++			/* make sure we close sockets */
++			FD_ZERO(&fds);
++                        for (i = 0; i < listensockcount; i++) {
++                        	m_close(listensocks[i]);
++                        }
++
++			break;
+ 		}
+ 		
+ 		if (val == 0) {
+@@ -281,6 +344,8 @@
+ 			if (fork_ret > 0) {
+ 
+ 				/* parent */
++				//getaddrstring(&remoteaddr, NULL, &remote_port, 0);
++				//printf("\nChild forked. Childpipe:%d conn_idx:%ld remotehost:%s remoteport:%s childPID:%d \n",childpipe[0],conn_idx,remote_host,remote_port,fork_ret);
+ 				childpipes[conn_idx] = childpipe[0];
+ 				m_close(childpipe[1]);
+ 				preauth_addrs[conn_idx] = remote_host;
+@@ -328,6 +393,7 @@
+ 	} /* for(;;) loop */
+ 
+ 	/* don't reach here */
++	return NULL;
+ }
+ #endif /* NON_INETD_MODE */
+ 
+@@ -358,7 +424,6 @@
+ 
+ /* catch ctrl-c or sigterm */
+ static void sigintterm_handler(int UNUSED(unused)) {
+-
+ 	exitflag = 1;
+ }
+ 

@@ -1,0 +1,76 @@
+--- a/Makefile.in	2016-07-21 20:47:09.000000000 +0530
++++ b/Makefile.in	2019-06-07 15:08:42.613982883 +0530
+@@ -10,7 +10,7 @@
+ # Hopefully that seems intuitive.
+ 
+ ifndef PROGRAMS
+-	PROGRAMS=dropbear dbclient dropbearkey dropbearconvert
++	PROGRAMS=dropbear
+ endif
+ 
+ STATIC_LTC=libtomcrypt/libtomcrypt.a
+@@ -18,6 +18,8 @@
+ 
+ LIBTOM_LIBS=@LIBTOM_LIBS@
+ 
++DROPBEAR_SERVER_LIB=libdropbear.so
++
+ ifeq (@BUNDLED_LIBTOM@, 1)
+ LIBTOM_DEPS=$(STATIC_LTC) $(STATIC_LTM) 
+ CFLAGS+=-I$(srcdir)/libtomcrypt/src/headers/
+@@ -75,6 +77,9 @@
+ bindir=@bindir@
+ sbindir=@sbindir@
+ mandir=@mandir@
++libdir = @libdir@
++includedir = @includedir@
++pkgconfigdir = $(libdir)/pkgconfig
+ 
+ CC=@CC@
+ AR=@AR@
+@@ -82,9 +87,10 @@
+ STRIP=@STRIP@
+ INSTALL=@INSTALL@
+ CPPFLAGS=@CPPFLAGS@
+-CFLAGS+=-I. -I$(srcdir) $(CPPFLAGS) @CFLAGS@
++CFLAGS+=-I. -I$(srcdir) $(CPPFLAGS) @CFLAGS@ -fPIC
+ LIBS+=@LIBS@
+ LDFLAGS=@LDFLAGS@
++ARFLAGS=rcT
+ 
+ EXEEXT=@EXEEXT@
+ 
+@@ -106,12 +112,14 @@
+ 
+ ifeq ($(STATIC), 1)
+ 	LDFLAGS+=-static
++else
++	LDFLAGS +=-shared
+ endif
+ 
+ ifeq ($(MULTI), 1)
+ 	TARGETS=dropbearmulti
+ else
+-	TARGETS=$(PROGRAMS)
++	TARGETS=$(DROPBEAR_SERVER_LIB)
+ endif
+ 
+ # for the scp progress meter. The -D doesn't affect anything else.
+@@ -175,6 +183,8 @@
+ scp: $(SCPOBJS)  $(HEADERS) Makefile
+ 	$(CC) $(LDFLAGS) -o $@$(EXEEXT) $(SCPOBJS)
+ 
++$(DROPBEAR_SERVER_LIB):$(LIBTOM_LIBS)$(dropbearobjs)
++	$(CC) $(LDFLAGS) -o $@ $(dropbearobjs) $(LIBTOM_LIBS)
+ 
+ # multi-binary compilation.
+ MULTIOBJS=
+@@ -215,7 +225,7 @@
+ 
+ thisclean:
+ 	-rm -f dropbear dbclient dropbearkey dropbearconvert scp scp-progress \
+-			dropbearmulti *.o *.da *.bb *.bbg *.prof 
++			dropbearmulti *.o *.da *.bb *.bbg *.prof libdropbear.pc $(DROPBEAR_SERVER_LIB)
+ 
+ distclean: clean tidy
+ 	-rm -f config.h

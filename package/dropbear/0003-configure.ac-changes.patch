@@ -1,0 +1,12 @@
+--- a/configure.ac	2016-07-21 20:47:09.000000000 +0530
++++ b/configure.ac	2019-06-07 16:05:13.409598623 +0530
+@@ -730,6 +730,9 @@
+ AC_CONFIG_FILES(Makefile $LIBTOM_FILES)
+ AC_OUTPUT
+ 
++AC_CONFIG_FILES(libdropbear.pc)
++AC_OUTPUT
++
+ AC_MSG_NOTICE()
+ if test $BUNDLED_LIBTOM = 1 ; then
+ AC_MSG_NOTICE([Using bundled libtomcrypt and libtommath])

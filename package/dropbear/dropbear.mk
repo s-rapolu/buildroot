@@ -10,16 +10,17 @@ DROPBEAR_SOURCE = dropbear-$(DROPBEAR_VERSION).tar.bz2
 DROPBEAR_LICENSE = MIT, BSD-2c-like, BSD-2c
 DROPBEAR_LICENSE_FILES = LICENSE
 DROPBEAR_TARGET_BINS = dropbearkey dropbearconvert scp
-DROPBEAR_PROGRAMS = dropbear $(DROPBEAR_TARGET_BINS)
+DROPBEAR_PROGRAMS = dropbear #$(DROPBEAR_TARGET_BINS)
+DROPBEAR_AUTORECONF = YES
 
-ifeq ($(BR2_PACKAGE_DROPBEAR_CLIENT),y)
+#ifeq ($(BR2_PACKAGE_DROPBEAR_CLIENT),y)
 # Build dbclient, and create a convenience symlink named ssh
-DROPBEAR_PROGRAMS += dbclient
-DROPBEAR_TARGET_BINS += dbclient ssh
-endif
+#DROPBEAR_PROGRAMS += dbclient
+#DROPBEAR_TARGET_BINS += dbclient ssh
+#endif
 
 DROPBEAR_MAKE = \
-	$(MAKE) MULTI=1 SCPPROGRESS=1 \
+	$(MAKE) #MULTI=1 SCPPROGRESS=1 \
 	PROGRAMS="$(DROPBEAR_PROGRAMS)"
 
 ifeq ($(BR2_STATIC_LIBS),y)
@@ -89,7 +90,10 @@ DROPBEAR_CONF_OPTS += --disable-lastlog
 endif
 
 define DROPBEAR_INSTALL_TARGET_CMDS
-	$(INSTALL) -m 755 $(@D)/dropbearmulti $(TARGET_DIR)/usr/sbin/dropbear
+	$(INSTALL) -D $(@D)/libdropbear.so $(STAGING_DIR)/usr/lib
+	$(INSTALL) -m 755 $(@D)/libdropbear.so $(TARGET_DIR)/usr/lib
+	$(INSTALL) -D $(@D)/libdropbear.h $(STAGING_DIR)/usr/include
+	$(INSTALL) -D $(@D)/libdropbear.pc $(STAGING_DIR)/usr/lib/pkgconfig/LibDropbear.pc
 	for f in $(DROPBEAR_TARGET_BINS); do \
 		ln -snf ../sbin/dropbear $(TARGET_DIR)/usr/bin/$$f ; \
 	done
