@@ -1,20 +1,32 @@
---- a/svr-main.c	2016-07-21 20:47:09.000000000 +0530
-+++ b/svr-main.c	2019-06-18 20:58:34.023322679 +0530
-@@ -30,19 +30,27 @@
+--- a/svr-main.c	2019-07-11 10:17:33.624000000 +0530
++++ b/svr-main.c	2019-07-12 18:28:22.417651251 +0530
+@@ -30,19 +30,39 @@
  #include "runopts.h"
  #include "dbrandom.h"
  #include "crypto_desc.h"
 +#include <pthread.h>
 +#include "libdropbear.h"
++#include "linkedlist.h"
  
  static size_t listensockets(int *sock, size_t sockcount, int *maxfd);
  static void sigchld_handler(int dummy);
  static void sigsegv_handler(int);
  static void sigintterm_handler(int fish);
-+
-+static int pluginActivated;
-+static pthread_t threadID;
 +void init_dropbear(int argc, char ** argv);
++void free_child_info();
++
++struct list_head child_connections_info;
++
++struct active_childs{
++	struct child_info info;
++	struct list_head child_list;
++};
++
++static int pluginActivated = 0;
++static pthread_t threadID;
++int served_clients = 0;
++int server_active = 0;
++int child_info_available = 0;
 +
  #ifdef INETD_MODE
  static void main_inetd(void);
@@ -29,30 +41,39 @@
  #if defined(DBMULTI_dropbear) || !defined(DROPBEAR_MULTI)
  #if defined(DBMULTI_dropbear) && defined(DROPBEAR_MULTI)
  int dropbear_main(int argc, char ** argv)
-@@ -75,6 +83,55 @@
+@@ -75,6 +95,154 @@
  	return -1;
  }
  #endif
 +#endif
++
 +void init_dropbear(int argc, char ** argv)
 +{
-+	 _dropbear_exit = svr_dropbear_exit;
-+        _dropbear_log = svr_dropbear_log;
-+
-+        disallow_core();
-+
-+        /* get commandline options */
-+        svr_getopts(argc, argv);
-+         /* Note: commonsetup() must happen before we daemon()ise. Otherwise
++	server_active = 1;
++	_dropbear_exit = svr_dropbear_exit;
++	_dropbear_log = svr_dropbear_log;
++	disallow_core();
++	/* get commandline options */
++	svr_getopts(argc, argv);
++	/* Note: commonsetup() must happen before we daemon()ise. Otherwise
 +           daemon() will chdir("/"), and we won't be able to find local-dir
 +           hostkeys. */
-+        commonsetup();
++	commonsetup();
++	INIT_LIST_HEAD(&child_connections_info);
++	child_info_available = 1;
 +}
 +
-+void activate_dropbear(int argc, char ** argv)
++void activate_dropbear(char* host_opt, char* port_opt, char* port_num)
 +{
 +	int status;
-+	int i;
++	int argc=4;
++	char *name = "file name";
++	char **argv;
++	argv = (char **)malloc(sizeof(char *)*4);
++	argv[0]= name;
++	argv[1]=host_opt;
++	argv[2]=port_opt;
++	argv[3]=port_num;
 +
 +	if(pluginActivated == 1)
 +	{
@@ -63,29 +84,120 @@
 +	init_dropbear(argc, argv);
 +	status = pthread_create(&threadID,NULL,main_noinetd,NULL);
 +	if(status != 0)
-+        {
-+        	printf("Error in creating thread\n");
-+                return;
-+        }
-+        printf("Plugin Activated \n");
-+        pluginActivated =1;
++	{
++		printf("Error in creating thread\n");
++		return;
++	}
++	printf("Plugin Activated \n");
++	pluginActivated =1;
 +}
 +
 +void deactivate_dropbear()
 +{
 +	if(pluginActivated == 1)
-+        {
-+        	exitflag =1;
-+                pthread_join(threadID, 0);
-+                pluginActivated = 0;
-+        }
-+        printf("Plugin DeActivated \n");
++	{
++		server_active = 0;
++		pthread_join(threadID, 0);
++		pluginActivated = 0;
++	}
++	printf("Plugin DeActivated \n");
 +	return;
 +}
++
++/*Return the number of clients currently connected*/
++
++int get_active_sessions_count(){
++	int count=0;
++	if(child_info_available){
++		struct active_childs *child;
++		struct list_head *ptr_list;
++		list_for_each(ptr_list,&child_connections_info){
++			child = list_entry(ptr_list,struct active_childs,child_list);
++			if(child){
++				count++;
++			}
++		}
++	}
++	return count;
++}
++
++/*To get the list of connections that are currently serving*/
++void  get_active_sessions_info(struct child_info* connected_childs,int connections_count){
++	if(child_info_available){
++		int count = 0;
++		struct active_childs *child;
++		struct list_head *ptr_list;
++		list_for_each(ptr_list,&child_connections_info){
++			child = list_entry(ptr_list, struct active_childs, child_list );
++			if(child && (count < connections_count)){
++				connected_childs[count].pid=child->info.pid;
++				strcpy(connected_childs[count].ipaddress,child->info.ipaddress);
++				strcpy(connected_childs[count].timestamp,child->info.timestamp);
++				count++;
++			}
++			else{
++				break;
++			}
++		}
++	}	
++}
++
++/* To terminate  the server connection to client with the pid  */
++int  close_client_session(int client_pid){
++	int pid_existing=0;
++	struct active_childs *child;
++	struct list_head *ptr_list;
++	if(child_info_available){
++		list_for_each(ptr_list,&child_connections_info){
++			child = list_entry(ptr_list,struct active_childs,child_list);
++			if(child && (child->info.pid == client_pid)){
++				pid_existing=1;
++				break;
++			}
++		}
++		if(pid_existing){
++			if(kill(client_pid,SIGTERM)== -1){
++				return errno;
++			}
++			else{
++				return 0;
++			}
++		}
++		else{
++			return -1;
++		}
++	}
++	else{
++		return -1;
++	}
++}
++
++/* total number of connections are srved till now*/
++int get_total_sessions_served(){
++	return served_clients;
++}
++
++void free_child_info(){
++	if(child_info_available){
++		struct active_childs *child;
++		struct list_head *ptr_list;
++		list_for_each(ptr_list, &child_connections_info){
++			child  = list_entry(ptr_list,struct active_childs, child_list);
++			if (child){
++				kill(child->info.pid,SIGTERM);
++			}
++			else{
++				break;
++			}
++		}
++	}
++
++}
++
  
  #ifdef INETD_MODE
  static void main_inetd() {
-@@ -104,7 +161,7 @@
+@@ -104,25 +272,23 @@
  #endif /* INETD_MODE */
  
  #ifdef NON_INETD_MODE
@@ -94,20 +206,28 @@
  	fd_set fds;
  	unsigned int i, j;
  	int val;
-@@ -118,11 +175,7 @@
+ 	int maxsock = -1;
+ 	int listensocks[MAX_LISTEN_ADDR];
+ 	size_t listensockcount = 0;
+-	FILE *pidfile = NULL;
++	//FILE *pidfile = NULL;
+ 
+ 	int childpipes[MAX_UNAUTH_CLIENTS];
+ 	char * preauth_addrs[MAX_UNAUTH_CLIENTS];
  
  	int childsock;
  	int childpipe[2];
--
++	struct timeval timeout;
+ 
 -	/* Note: commonsetup() must happen before we daemon()ise. Otherwise
 -	   daemon() will chdir("/"), and we won't be able to find local-dir
 -	   hostkeys. */
 -	commonsetup();
-+	struct timeval timeout;
++	INIT_LIST_HEAD(&child_connections_info);
  
  	/* sockets to identify pre-authenticated clients */
  	for (i = 0; i < MAX_UNAUTH_CLIENTS; i++) {
-@@ -141,6 +194,7 @@
+@@ -141,6 +307,7 @@
  		FD_SET(listensocks[i], &fds);
  	}
  
@@ -115,55 +235,76 @@
  	/* fork */
  	if (svr_opts.forkbg) {
  		int closefds = 0;
-@@ -153,7 +207,7 @@
- 			dropbear_exit("Failed to daemonize: %s", strerror(errno));
+@@ -154,6 +321,7 @@
  		}
  	}
--
+ 
 +#endif
  	/* should be done after syslog is working */
  	if (svr_opts.forkbg) {
  		dropbear_log(LOG_INFO, "Running in background");
-@@ -168,6 +222,8 @@
+@@ -161,13 +329,17 @@
+ 		dropbear_log(LOG_INFO, "Not backgrounding");
+ 	}
+ 
++#if 0
+ 	/* create a PID file so that we can be killed easily */
+ 	pidfile = fopen(svr_opts.pidfile, "w");
+ 	if (pidfile) {
+ 		fprintf(pidfile, "%d\n", getpid());
  		fclose(pidfile);
  	}
++#endif
  
 +	timeout.tv_sec = 5;
 +	timeout.tv_usec = 0;
  	/* incoming connection select loop */
  	for(;;) {
  
-@@ -186,11 +242,18 @@
+@@ -186,11 +358,18 @@
  			}
  		}
  
 -		val = select(maxsock+1, &fds, NULL, NULL, NULL);
 +		val = select(maxsock+1, &fds, NULL, NULL, &timeout);
  
- 		if (exitflag) {
- 			unlink(svr_opts.pidfile);
+-		if (exitflag) {
+-			unlink(svr_opts.pidfile);
 -			dropbear_exit("Terminated by signal");
++		if (!server_active) {
++			//unlink(svr_opts.pidfile);
 +			//dropbear_exit("Terminated by signal");
 +			/* make sure we close sockets */
 +			FD_ZERO(&fds);
-+                        for (i = 0; i < listensockcount; i++) {
-+                        	m_close(listensocks[i]);
-+                        }
-+
++			for (i = 0; i < listensockcount; i++) {
++				m_close(listensocks[i]);
++			}
++			free_child_info();
 +			break;
  		}
  		
  		if (val == 0) {
-@@ -281,6 +344,8 @@
+@@ -281,6 +460,19 @@
  			if (fork_ret > 0) {
  
  				/* parent */
-+				//getaddrstring(&remoteaddr, NULL, &remote_port, 0);
-+				//printf("\nChild forked. Childpipe:%d conn_idx:%ld remotehost:%s remoteport:%s childPID:%d \n",childpipe[0],conn_idx,remote_host,remote_port,fork_ret);
++				/* taking the pids and respective IP address and timestamp to structure list*/
++				time_t now;
++				time(&now);
++				struct active_childs *child=NULL;
++				served_clients++;
++				child = (struct active_childs *)malloc(sizeof(struct active_childs));
++				if(!child){
++					perror("malloc");
++				}
++				child->info.pid = fork_ret;
++				strcpy(child->info.ipaddress, remote_host);
++				strcpy(child->info.timestamp,ctime(&now));
++				list_add_tail(&(child->child_list),&child_connections_info);
  				childpipes[conn_idx] = childpipe[0];
  				m_close(childpipe[1]);
  				preauth_addrs[conn_idx] = remote_host;
-@@ -328,6 +393,7 @@
+@@ -328,6 +520,7 @@
  	} /* for(;;) loop */
  
  	/* don't reach here */
@@ -171,11 +312,25 @@
  }
  #endif /* NON_INETD_MODE */
  
-@@ -358,7 +424,6 @@
+@@ -338,7 +531,20 @@
  
- /* catch ctrl-c or sigterm */
- static void sigintterm_handler(int UNUSED(unused)) {
--
- 	exitflag = 1;
- }
+ 	const int saved_errno = errno;
  
+-	while(waitpid(-1, NULL, WNOHANG) > 0) {}
++	int  pid;
++	/* disconnected ports are removing from structure List */
++	while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) {
++		struct active_childs *child;
++		struct list_head *ptr_list;
++		list_for_each(ptr_list, &child_connections_info){
++			child  = list_entry(ptr_list,struct active_childs, child_list);
++			if (child && child->info.pid == pid){
++				list_del(ptr_list);
++				free(child);
++				break;
++			}
++		}		
++	}
+ 
+ 	sa_chld.sa_handler = sigchld_handler;
+ 	sa_chld.sa_flags = SA_NOCLDSTOP;
