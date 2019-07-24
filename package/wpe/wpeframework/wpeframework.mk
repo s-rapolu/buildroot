@@ -4,8 +4,8 @@
 #
 ################################################################################
 
-WPEFRAMEWORK_VERSION = aa452ab1673e86b206f6737ec77d48ce8066437d 
-WPEFRAMEWORK_SITE = $(call github,WebPlatformForEmbedded,WPEFramework,$(WPEFRAMEWORK_VERSION))
+WPEFRAMEWORK_VERSION = fbc184eae6a909921e259d093fbd034d2f625596 
+WPEFRAMEWORK_SITE = $(call github,s-rapolu,WPEFramework,$(WPEFRAMEWORK_VERSION))
 WPEFRAMEWORK_INSTALL_STAGING = YES
 WPEFRAMEWORK_DEPENDENCIES = zlib $(call qstrip,$(BR2_PACKAGE_SDK_INSTALL))
 

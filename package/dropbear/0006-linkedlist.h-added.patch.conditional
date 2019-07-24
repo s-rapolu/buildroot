@@ -1,10 +1,10 @@
 --- a/linkedlist.h	2019-07-11 14:07:04.040000000 +0530
-+++ b/linkedlist.h	2019-07-12 17:13:25.350676534 +0530
-@@ -0,0 +1,168 @@
++++ b/linkedlist.h	2019-07-17 11:49:34.416678720 +0530
+@@ -0,0 +1,166 @@
 +/**
 + * info: linkedlist.h file is derived from the
-+ * linux-headers-4.15.0-29-generic/include/linux/list.h 
-+ *
++ * linux-5.2.1/include/linux/list.h
++ * https://www.kernel.org
 + *
 + */
 +
@@ -24,9 +24,9 @@
 + * @param member     the name of the member within the struct.
 + *
 + */
-+#define container_of(ptr,type,member) ({				\
-+		const typeof( ((type *)0)->member ) *__mptr = (ptr);	\
-+		(type *)( (char *)__mptr - offsetof(type,member) );})
++#define container_of(ptr,type,member) ({                                \
++                const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
++                (type *)( (char *)__mptr - offsetoff(type,member) );})
 +/*
 + * These are non-NULL pointers that will result in page faults
 + * under normal circumstances, used to verify that nobody uses
@@ -161,8 +161,8 @@
 +	container_of(ptr, type, member)
 +
 +/**
-+ * list_for_each	-	iterate over a list
-+ * @pos:	the &struct list_head to use as a loop cursor.
++ * list_for_each        -       iterate over a list
++ * @pos:        the &struct list_head to use as a loop cursor.
 + * @head:	the head for your list.
 + */
 +#define list_for_each(pos, head) \

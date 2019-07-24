@@ -4,8 +4,8 @@
 #
 ################################################################################
 
-WPEFRAMEWORK_PLUGINS_VERSION = d5787cae9fd5d85ff4cf1ba22e08435022220c0e 
-WPEFRAMEWORK_PLUGINS_SITE = $(call github,WebPlatformForEmbedded,WPEFrameworkPlugins,$(WPEFRAMEWORK_PLUGINS_VERSION))
+WPEFRAMEWORK_PLUGINS_VERSION = 4cf855084ce50918fd347eee0dceb7cf2f32f2e0
+WPEFRAMEWORK_PLUGINS_SITE = $(call github,s-rapolu,WPEFrameworkPlugins,$(WPEFRAMEWORK_PLUGINS_VERSION))
 WPEFRAMEWORK_PLUGINS_INSTALL_STAGING = YES
 WPEFRAMEWORK_PLUGINS_DEPENDENCIES = wpeframework libpng
 

@@ -11,7 +11,7 @@
 +#define	IPADDRESSLENGTH		16
 +#define	TIMESTAMPLENGTH		26
 +
-+struct child_info{
++struct client_info{
 +        int  pid;
 +        char ipaddress[IPADDRESSLENGTH];  //Client IPv4 address
 +        char timestamp[TIMESTAMPLENGTH];  //timestamp of the received client
@@ -20,7 +20,7 @@
 +void activate_dropbear(char* , char* , char*);
 +void deactivate_dropbear();
 +int get_active_sessions_count();
-+void get_active_sessions_info(struct child_info*, int);
++void get_active_sessions_info(struct client_info*, int);
 +int close_client_session(int);
 +int get_total_sessions_served();
 +
