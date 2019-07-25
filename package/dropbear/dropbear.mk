@@ -104,19 +104,21 @@ ifneq ($(BR2_PACKAGE_DROPBEAR_LASTLOG),y)
 DROPBEAR_CONF_OPTS += --disable-lastlog
 endif
 
-define DROPBEAR_INSTALL_TARGET_CMDS
 ifeq ($(BR2_PACKAGE_DROPBEAR_LIB),y)
+define DROPBEAR_INSTALL_TARGET_CMDS
         ln -snf /var/run/dropbear $(TARGET_DIR)/etc/dropbear
-        $(INSTALL) -D $(@D)/libdropbear.so $(STAGING_DIR)/usr/lib
+        $(INSTALL) -D $(@D)/libdropbear.so $(TARGET_DIR)/usr/lib
         $(INSTALL) -D $(@D)/libdropbear.h $(STAGING_DIR)/usr/include
         $(INSTALL) -D $(@D)/libdropbear.pc $(STAGING_DIR)/usr/lib/pkgconfig/LibDropbear.pc
-else #case for BR2_PACKAGE_DROPBEAR_PROGRAM
+endef
+else
+define DROPBEAR_INSTALL_TARGET_CMDS
         $(INSTALL) -m 755 $(@D)/dropbearmulti $(TARGET_DIR)/usr/sbin/dropbear
         for f in $(DROPBEAR_TARGET_BINS); do \
                 ln -snf ../sbin/dropbear $(TARGET_DIR)/usr/bin/$$f ; \
         done
         ln -snf /var/run/dropbear $(TARGET_DIR)/etc/dropbear
-endif
 endef
+endif
 
 $(eval $(autotools-package))
