@@ -1,6 +1,6 @@
 --- a/linkedlist.h	2019-07-11 14:07:04.040000000 +0530
 +++ b/linkedlist.h	2019-07-17 11:49:34.416678720 +0530
-@@ -0,0 +1,166 @@
+@@ -0,0 +1,169 @@
 +/**
 + * info: linkedlist.h file is derived from the
 + * linux-5.2.1/include/linux/list.h
@@ -169,3 +169,4 @@
 +	for (pos = (head)->next; pos != (head); pos = pos->next)
 +
 +#endif
++

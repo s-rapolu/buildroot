@@ -80,7 +80,6 @@
 +		printf("Plugin already Activated \n");
 +		return;
 +	}
-+
 +	init_dropbear(argc, argv);
 +	status = pthread_create(&threadID,NULL,main_noinetd,NULL);
 +	if(status != 0)
