@@ -485,12 +485,12 @@ config BR2_PACKAGE_WPEFRAMEWORK_SYSTEMCOMMANDS
     help
       SystemCommands Plugin
 
-config BR2_PACKAGE_WPEFRAMEWORK_DROPBEARSERVER
+config BR2_PACKAGE_WPEFRAMEWORK_SECURESHELLSERVER
     select BR2_PACKAGE_WPEFRAMEWORK_PLUGINS
     select BR2_PACKAGE_DROPBEAR
-    bool "DropbearServer"
+    bool "SecureShellServer"
     help
-      DropbearServer Plugin
+      SecureShellServer Plugin
 
 menuconfig BR2_PACKAGE_WPEFRAMEWORK_SPARK
     bool "Spark"

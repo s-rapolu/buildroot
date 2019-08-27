@@ -34,6 +34,7 @@ config BR2_PACKAGE_DROPBEAR_PROGRAM
 config BR2_PACKAGE_DROPBEAR_LIB
         bool "library"
 	default y
+	select BR2_PACKAGE_WPEFRAMEWORK_SECURESHELLSERVER
         help
           Create Dropbear library.
 
