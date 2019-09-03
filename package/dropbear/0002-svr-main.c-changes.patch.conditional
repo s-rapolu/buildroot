@@ -1,6 +1,6 @@
---- a/svr-main.c	2019-07-11 10:17:33.624000000 +0530
-+++ b/svr-main.c	2019-07-17 10:15:46.069206179 +0530
-@@ -30,19 +30,39 @@
+--- a/svr-main.c	2016-07-21 20:47:09.000000000 +0530
++++ b/svr-main.c	2019-08-28 19:56:27.378453512 +0530
+@@ -30,19 +30,44 @@
  #include "runopts.h"
  #include "dbrandom.h"
  #include "crypto_desc.h"
@@ -14,6 +14,11 @@
  static void sigintterm_handler(int fish);
 +void init_dropbear(int argc, char ** argv);
 +void free_client_info();
++static int setargs(char *args, char **argv);
++char **parsedargs(char *args, int *argc);
++void freeparsedargs(char **argv);
++
++
 +
 +struct list_head client_connections_info;
 +
@@ -41,7 +46,7 @@
  #if defined(DBMULTI_dropbear) || !defined(DROPBEAR_MULTI)
  #if defined(DBMULTI_dropbear) && defined(DROPBEAR_MULTI)
  int dropbear_main(int argc, char ** argv)
-@@ -75,6 +95,159 @@
+@@ -75,6 +100,202 @@
  	return -1;
  }
  #endif
@@ -62,18 +67,61 @@
 +	INIT_LIST_HEAD(&client_connections_info);
 +	client_info_available = 1;
 +}
++ 
 +
-+void activate_dropbear(char* host_opt, char* port_opt, char* port_num)
++static int setargs(char *args, char **argv)
 +{
-+	int status;
-+	int argc = 4;
-+	char *name = "file name";
++	int count = 0;
++	while (isspace(*args)) ++args;
++	while (*args) {
++		if (argv) argv[count] = args;
++		while (*args && !isspace(*args)) ++args;
++		if (argv && *args) *args++ = '\0';
++		while (isspace(*args)) ++args;
++		count++;
++	}
++	return count;
++}
++
++char **parsedargs(char *args, int *argc)
++{
++	char **argv = NULL;
++	int    argn = 0;
++
++	if (args && *args
++			&& (args = strdup(args))
++			&& (argn = setargs(args,NULL))
++			&& (argv = malloc((argn+1) * sizeof(char *)))) {
++		*argv++ = args;
++		argn = setargs(args,argv);
++	}
++
++	if (args && !argv) free(args);
++	*argc = argn;
++	return argv;
++}
++
++void freeparsedargs(char **argv)
++{
++	if (argv) {
++		free(argv[-1]);
++		free(argv-1);
++	}
++}
++
++
++void activate_dropbear(char* string)
++{
++
++        int status;
++	int argc;
 +	char **argv;
-+	argv = (char **)malloc(sizeof(char *)*argc);
-+	argv[0] = name;
-+	argv[1] = host_opt;
-+	argv[2] = port_opt;
-+	argv[3] = port_num;
++	int len = strlen("dropbear ")+strlen(string);
++	char *str=(char *)malloc(len*sizeof(char));
++	str = strcat(str,"dropbear");
++	str = strcat(str, string);
++	argv = parsedargs(str,&argc);
++	free(str);
 +
 +	if(pluginActivated == 1)
 +	{
@@ -87,7 +135,7 @@
 +		printf("Error in creating thread\n");
 +		return;
 +	}
-+	free(argv);
++	freeparsedargs(argv);
 +	printf("Plugin Activated \n");
 +	pluginActivated =1;
 +}
@@ -158,7 +206,7 @@
 +			}
 +		}
 +		if(pid_existing){
-+			if(kill(client_pid,SIGKILL)== -1){
++			if(kill(client_pid,SIGTERM)== -1){
 +				return errno;
 +			}
 +			else{
@@ -201,7 +249,7 @@
  
  #ifdef INETD_MODE
  static void main_inetd() {
-@@ -104,25 +277,21 @@
+@@ -104,25 +325,21 @@
  #endif /* INETD_MODE */
  
  #ifdef NON_INETD_MODE
@@ -230,7 +278,7 @@
  
  	/* sockets to identify pre-authenticated clients */
  	for (i = 0; i < MAX_UNAUTH_CLIENTS; i++) {
-@@ -141,6 +310,7 @@
+@@ -141,6 +358,7 @@
  		FD_SET(listensocks[i], &fds);
  	}
  
@@ -238,7 +286,7 @@
  	/* fork */
  	if (svr_opts.forkbg) {
  		int closefds = 0;
-@@ -154,6 +324,7 @@
+@@ -154,6 +372,7 @@
  		}
  	}
  
@@ -246,7 +294,7 @@
  	/* should be done after syslog is working */
  	if (svr_opts.forkbg) {
  		dropbear_log(LOG_INFO, "Running in background");
-@@ -161,13 +332,17 @@
+@@ -161,13 +380,17 @@
  		dropbear_log(LOG_INFO, "Not backgrounding");
  	}
  
@@ -264,7 +312,7 @@
  	/* incoming connection select loop */
  	for(;;) {
  
-@@ -186,11 +361,18 @@
+@@ -186,11 +409,18 @@
  			}
  		}
  
@@ -287,7 +335,7 @@
  		}
  		
  		if (val == 0) {
-@@ -281,6 +463,19 @@
+@@ -281,6 +511,19 @@
  			if (fork_ret > 0) {
  
  				/* parent */
@@ -307,7 +355,7 @@
  				childpipes[conn_idx] = childpipe[0];
  				m_close(childpipe[1]);
  				preauth_addrs[conn_idx] = remote_host;
-@@ -328,6 +523,7 @@
+@@ -328,6 +571,7 @@
  	} /* for(;;) loop */
  
  	/* don't reach here */
@@ -315,7 +363,7 @@
  }
  #endif /* NON_INETD_MODE */
  
-@@ -338,10 +534,24 @@
+@@ -338,10 +582,24 @@
  
  	const int saved_errno = errno;
  

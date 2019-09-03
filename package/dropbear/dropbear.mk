@@ -111,7 +111,9 @@ define DROPBEAR_INSTALL_TARGET_CMDS
         $(INSTALL) -D $(@D)/libdropbear.h $(STAGING_DIR)/usr/include
         $(INSTALL) -D $(@D)/libdropbear.pc $(STAGING_DIR)/usr/lib/pkgconfig/LibDropbear.pc
 endef
-else
+endif
+
+ifeq ($(BR2_PACKAGE_DROPBEAR_PROGRAM),y)
 define DROPBEAR_INSTALL_TARGET_CMDS
         $(INSTALL) -m 755 $(@D)/dropbearmulti $(TARGET_DIR)/usr/sbin/dropbear
         for f in $(DROPBEAR_TARGET_BINS); do \
