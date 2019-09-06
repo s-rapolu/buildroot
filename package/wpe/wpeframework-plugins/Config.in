@@ -62,17 +62,26 @@ config BR2_PACKAGE_WPEFRAMEWORK_COMPOSITOR_OUTOFPROCESS
     help
       Select this to run this plugin in its own process.
 
-choice
+choice BR2_PACKAGE_WPEFRAMEWORK_COMPOSITOR_RESOLUTION
+    default BR2_PACKAGE_WPEFRAMEWORK_COMPOSITOR_RESOLUTION_720P
     prompt "resolution"
+    help
+      Select device output resolution on compositor
 
-menuconfig BR2_PACKAGE_WPEFRAMEWORK_COMPOSITOR_RESOLUTION_720P
+config BR2_PACKAGE_WPEFRAMEWORK_COMPOSITOR_RESOLUTION_720P
     bool "720p"
+    help
+      Set the resolution to 720p (HD Ready)
 
-menuconfig BR2_PACKAGE_WPEFRAMEWORK_COMPOSITOR_RESOLUTION_1080P
+config BR2_PACKAGE_WPEFRAMEWORK_COMPOSITOR_RESOLUTION_1080P
     bool "1080p"
+    help
+      Set the resolution to 1080p (Full HD)
 
-menuconfig BR2_PACKAGE_WPEFRAMEWORK_COMPOSITOR_RESOLUTION_2160P
+config BR2_PACKAGE_WPEFRAMEWORK_COMPOSITOR_RESOLUTION_2160P
     bool "2160p"
+    help
+      Set the resolution to 2160p (4k)
 
 endchoice
 
@@ -102,19 +111,19 @@ config BR2_PACKAGE_WPEFRAMEWORK_COMPOSITOR_ALLOW_UNAUTHENTICATED_CLIENTS
     help
       Allow unauthenticated clients on the nxserver.
 
-choice
+choice BR2_PACKAGE_WPEFRAMEWORK_COMPOSITOR_SVP
     prompt "svp type"
     default BR2_PACKAGE_WPEFRAMEWORK_COMPOSITOR_SVP_ALL if BR2_PACKAGE_BCM_REFSW_SAGE
     default BR2_PACKAGE_WPEFRAMEWORK_COMPOSITOR_SVP_NONE if !BR2_PACKAGE_BCM_REFSW_SAGE
 
-menuconfig BR2_PACKAGE_WPEFRAMEWORK_COMPOSITOR_SVP_NONE
+config BR2_PACKAGE_WPEFRAMEWORK_COMPOSITOR_SVP_NONE
     bool "none"
 
-menuconfig BR2_PACKAGE_WPEFRAMEWORK_COMPOSITOR_SVP_VIDEO
+config BR2_PACKAGE_WPEFRAMEWORK_COMPOSITOR_SVP_VIDEO
     depends on BR2_PACKAGE_BCM_REFSW_SAGE
     bool "video"
 
-menuconfig BR2_PACKAGE_WPEFRAMEWORK_COMPOSITOR_SVP_ALL
+config BR2_PACKAGE_WPEFRAMEWORK_COMPOSITOR_SVP_ALL
     depends on BR2_PACKAGE_BCM_REFSW_SAGE
     bool "all"
 
@@ -182,6 +191,14 @@ config BR2_PACKAGE_WPEFRAMEWORK_DEVICEINFO
     default y
     help
       DeviceInfo Plugin
+
+config BR2_PACKAGE_WPEFRAMEWORK_DEVICEIDENTIFICATION
+    select BR2_PACKAGE_WPEFRAMEWORK_PLUGINS
+    depends on BR2_PACKAGE_HAS_NEXUS
+    bool "DeviceIdentification"
+    default y
+    help
+      DeviceIdentification Plugin (Nexus OTP)
 
 config BR2_PACKAGE_WPEFRAMEWORK_DSRESOLUTION
     select BR2_PACKAGE_WPEFRAMEWORK_PLUGINS
@@ -323,6 +340,14 @@ config BR2_PACKAGE_WPEFRAMEWORK_NETWORKCONTROL
       Control the IP adressing of the interfaces in the system from
       WPEFramework (static IPv4/IPv6 or dhcp IPv4)
 
+config BR2_PACKAGE_WPEFRAMEWORK_PACKAGER
+    select BR2_PACKAGE_WPEFRAMEWORK_PLUGINS
+    default n
+    bool "Packager"
+    help
+      Packager Plugin, install packages based upon OPKG.
+
+
 config BR2_PACKAGE_WPEFRAMEWORK_POWER
     select BR2_PACKAGE_WPEFRAMEWORK_PLUGINS
     default n
@@ -427,49 +452,142 @@ menuconfig BR2_PACKAGE_WPEFRAMEWORK_STREAMER
 
 if BR2_PACKAGE_WPEFRAMEWORK_STREAMER
 
-config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_SI_PARSING
-    select BR2_PACKAGE_WPEFRAMEWORK_PLUGINS
-    bool "SI parsing"
+menuconfig BR2_PACKAGE_WPEFRAMEWORK_STREAMER_AAMP
+    bool "AAMP"
+    select BR2_PACKAGE_GST1_AAMP
+    default n
     help
-      Enable SI parsing from the streamer.
+      Enable AAMP player
 
-config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_TS_SCANNING
-    select BR2_PACKAGE_WPEFRAMEWORK_PLUGINS
+if BR2_PACKAGE_WPEFRAMEWORK_STREAMER_AAMP
+
+config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_AAMP_FRONTENDS
+    string "Frontends"
+    default "0"
+    help
+      Sets the number of frontends (tuners) supported.
+
+config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_AAMP_USE_WESTEROS_SINK
+    bool "Use Westeros Sink"
+    default n
+    help
+      Denotes if Westeros sink shall be used.
+
+endif # BR2_PACKAGE_WPEFRAMEWORK_STREAMER_AAMP
+
+menuconfig BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST
+    bool "Broadcast"
+    default n
+    help
+      Enable broadcast player
+
+if BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST
+
+choice BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_TYPE
+    prompt "Broadcast modus"
+    default BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_CABLE
+config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_CABLE
+    bool "Cable"
+config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_SATELLITE
+    bool "Satellite"
+config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_TERRESTRIAL
+    bool "Terrestrial"
+endchoice
+
+choice BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_STANDARD
+    prompt "Broadcast standard"
+    default BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_STANDARD_ATSC
+config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_STANDARD_DVB
+    bool "DVB"
+config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_STANDARD_ATSC
+    bool "ATSC"
+config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_STANDARD_ISDB
+    bool "ISDB"
+endchoice
+
+if BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_CABLE
+
+if BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_STANDARD_CABLE
+choice BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_CABLE_ANNEX_CABLE
+    prompt "Broadcast standard annex"
+    default BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_CABLE_ANNEX_C
+config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_CABLE_ANNEX_NO_ANNNEX
+    bool "No annex"
+config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_CABLE_ANNEX_A
+    bool "A"
+config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_CABLE_ANNEX_B
+    bool "B"
+config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_CABLE_ANNEX_C
+    bool "C"
+endchoice
+endif
+
+config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_CABLE_FRONTENDS
+    string "Frontends (cable)"
+    default "1"
+    help
+      Sets the number of frontends (tuners) supported.
+
+endif # BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_CABLE
+
+if BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_SATELLITE
+
+if BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_STANDARD_SATTELITE
+choice BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_SATELLITE_ANNEX_DVB_TYPE
+    prompt "Broadcast standard annex"
+    default BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_SATELLITE_ANNEX_A
+config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_SATELLITE_ANNEX_NO_ANNNEX
+    bool "No annex"
+config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_SATELLITE_ANNEX_A
+    bool "A"
+endchoice
+endif
+
+config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_CABLE_FRONTENDS
+    string "Frontends (cable)"
+    default "1"
+    help
+      Sets the number of frontends (tuners) supported.
+
+endif # BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_SATELLITE
+
+if BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_TERRESTRIAL
+
+if BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_STANDARD_DVB
+choice BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_TERRESTRIAL_TYPE
+    prompt "Broadcast standard annex"
+    default BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_TERRESTRIAL_ANNEX_A
+config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_TERRESTRIAL_ANNEX_NO_ANNNEX
+    bool "No annex"
+config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_TERRESTRIAL_ANNEX_A
+    bool "A"
+endchoice
+endif
+
+config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_TERRESTRIAL_FRONTENDS
+    string "Frontends (terrestrial)"
+    default "1"
+    help
+      Sets the number of frontends (tuners) supported.
+
+endif # BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_TERRESTRIAL
+
+config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_TS_SCANNING
     bool "TS scanning"
     help
       Enable transport stream scanning from the home transport stream.
 
-if BR2_PACKAGE_WPEFRAMEWORK_STREAMER_TS_SCANNING
+if BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_TS_SCANNING
 
-config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_HOME_TS
+config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_HOME_TS
     string "Home transport stream"
     default "frequency=714\;modulation=64\;symbol=6875000"
     help
       Sets the Home transport
-endif
 
-choice
-    bool "DBS Options"
-    default BR2_PACKAGE_WPEFRAMEWORK_STREAMER_DVB
-    help
-      Choose the DBS flavor.
+endif # BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST_TS_SCANNING
 
-menuconfig BR2_PACKAGE_WPEFRAMEWORK_STREAMER_DVB
-    bool "DVB"
-    help
-      Enable DVB DBS
-
-menuconfig BR2_PACKAGE_WPEFRAMEWORK_STREAMER_ATSC
-    bool "ATSC"
-    help
-      Enable ATSC DBS
-endchoice
-
-config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_FRONTENDS
-    string "Frontends"
-    default "1"
-    help
-      Sets the number of frontends (tuners) available in the system.
+endif # BR2_PACKAGE_WPEFRAMEWORK_STREAMER_BROADCAST
 
 config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_DECODERS
     string "Decoders"
@@ -477,7 +595,7 @@ config BR2_PACKAGE_WPEFRAMEWORK_STREAMER_DECODERS
     help
       Sets the number of decoders available in the system.
 
-endif
+endif # BR2_PACKAGE_WPEFRAMEWORK_STREAMER
 
 config BR2_PACKAGE_WPEFRAMEWORK_SYSTEMCOMMANDS
     select BR2_PACKAGE_WPEFRAMEWORK_PLUGINS
@@ -553,6 +671,18 @@ menuconfig BR2_PACKAGE_WPEFRAMEWORK_WEBKITBROWSER
       WebKitBrowser Plugin
 
 if BR2_PACKAGE_WPEFRAMEWORK_WEBKITBROWSER
+
+menuconfig BR2_PACKAGE_WPEFRAMEWORK_WEBKITBROWSER_INJECTEDBUNDLE_INTERFACES
+    bool "injectedbundle"
+    default y
+
+if BR2_PACKAGE_WPEFRAMEWORK_WEBKITBROWSER_INJECTEDBUNDLE_INTERFACES
+
+config BR2_PACKAGE_WPEFRAMEWORK_WEBKITBROWSER_AMAZON_HAWAII
+    bool "amazon hawaii interface"
+    default n
+
+endif
 
 config BR2_PACKAGE_WPEFRAMEWORK_WEBKITBROWSER_AUTOSTART
     bool "autostart"
@@ -682,6 +812,89 @@ endif
 
 comment "WebKitBrowser depends on WPE WebKit to be selected"
     depends on !BR2_PACKAGE_WPEWEBKIT
+
+menuconfig BR2_PACKAGE_WPEFRAMEWORK_WEBPA
+    bool "WebPA"
+    select BR2_PACKAGE_LIBPARODUS
+    select BR2_PACKAGE_TINYXML
+    select BR2_PACKAGE_PARODUS
+    help
+      WPE Platform WebPA plugin
+
+if BR2_PACKAGE_WPEFRAMEWORK_WEBPA
+config BR2_PACKAGE_WPEFRAMEWORK_WEBPA_AUTOSTART
+    bool "autostart"
+    default n
+config BR2_PACKAGE_WPEFRAMEWORK_WEBPA_SERVICE
+    bool "parodus service"
+    default y
+
+if BR2_PACKAGE_WPEFRAMEWORK_WEBPA_SERVICE
+config BR2_PACKAGE_WPEFRAMEWORK_WEBPA_PINGWAITTIME
+    string "Ping Waiting Time"
+    default "60"
+config BR2_PACKAGE_WPEFRAMEWORK_WEBPA_WEBPAURL
+    string "WebPA Server URL (IP/DNSName and Port)"
+    default "http://192.168.1.1"
+config BR2_PACKAGE_WPEFRAMEWORK_WEBPA_PARODUSLOCALURL
+    string "Parodus Local URL (IP::PORT)"
+    default "tcp://127.0.0.1:6666"
+config BR2_PACKAGE_WPEFRAMEWORK_WEBPA_PARTENRID
+    string "Partner ID"
+    default "Metrological"
+config BR2_PACKAGE_WPEFRAMEWORK_WEBPA_BACKOFFMAX
+    string "Max retry sleep for WebPA connection"
+    default "9"
+config BR2_PACKAGE_WPEFRAMEWORK_WEBPA_CERTPATH
+    string "SSL Certificate Path of Parodus Service"
+    default "/etc/ssl/certs/ca-certificates.crt"
+endif
+
+config BR2_PACKAGE_WPEFRAMEWORK_WEBPA_CCSP
+        bool "webpa ccsp client"
+        select BR2_PACKAGE_PARODUS2CCSP
+        default n
+
+if BR2_PACKAGE_WPEFRAMEWORK_WEBPA_CCSP
+config BR2_PACKAGE_WPEFRAMEWORK_WEBPA_CCSPCLIENTURL
+    string "Parodus to CCSP Client URL (IP::PORT)"
+    default "tcp://127.0.0.1:6667"
+config BR2_PACKAGE_WPEFRAMEWORK_WEBPA_CCSP_DATAFILE
+    string "Device properties file for CCSP client"
+    default ""
+config BR2_PACKAGE_WPEFRAMEWORK_WEBPA_CCSP_CONFIGFILE
+    string "Config File for CCSP Client"
+    default "/etc/webpa_cfg.json"
+endif
+
+config BR2_PACKAGE_WPEFRAMEWORK_WEBPA_GENERIC_ADAPTER
+        bool "webpa generic adapter client"
+        default y
+
+if BR2_PACKAGE_WPEFRAMEWORK_WEBPA_GENERIC_ADAPTER
+config BR2_PACKAGE_WPEFRAMEWORK_WEBPA_GENERICCLIENTURL
+    string "Parodus to Generic Client URL (IP::PORT)"
+    default "tcp://127.0.0.1:6667"
+
+config BR2_PACKAGE_WPEFRAMEWORK_WEBPA_DATAMODELFILE
+    string "Data Model File for Generic Adapter"
+    default "/usr/share/WPEFramework/WebPA/data-model.xml"
+config BR2_PACKAGE_WPEFRAMEWORK_WEBPA_NOTIFYCONFIGFILE
+    string "Notifier configuration file for Generic Adapter"
+    default "/usr/share/WPEFramework/WebPA/notify_webpa_cfg.json"
+
+menuconfig BR2_PACKAGE_WPEFRAMEWORK_WEBPA_PROFILE
+	bool "Profiles"
+if BR2_PACKAGE_WPEFRAMEWORK_WEBPA_PROFILE
+config BR2_PACKAGE_WPEFRAMEWORK_WEBPA_DEVICE_INFO
+        bool "device info"
+	select BR2_PACKAGE_NCURSES
+	select BR2_PACKAGE_PROCPS_NG
+        default y
+endif
+endif
+
+endif
 
 config BR2_PACKAGE_WPEFRAMEWORK_WEBPROXY
     select BR2_PACKAGE_WPEFRAMEWORK_PLUGINS
