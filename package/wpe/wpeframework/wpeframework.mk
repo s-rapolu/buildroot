@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-WPEFRAMEWORK_VERSION = 2c1a62d177473c67c1abbd41147a051edb436433
+WPEFRAMEWORK_VERSION = e60bbfda4b0997c3053afff227e709b88032894a
 WPEFRAMEWORK_SITE = $(call github,s-rapolu,WPEFramework,$(WPEFRAMEWORK_VERSION))
 WPEFRAMEWORK_INSTALL_STAGING = YES
 WPEFRAMEWORK_DEPENDENCIES = zlib $(call qstrip,$(BR2_PACKAGE_SDK_INSTALL)) host-python host-python-jsonref
