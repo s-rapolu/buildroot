@@ -1,4 +1,4 @@
-From 3049d91f7b0ac4f1b9cb72591ccdf4b15714cf4c Mon Sep 17 00:00:00 2001
+From 34c64297ef3b718b7685ec3e1f8e768f0de3dbb1 Mon Sep 17 00:00:00 2001
 From: Suman Rapolu <suman.rapolu@soctronics.com>
 Date: Fri, 27 Sep 2019 11:10:57 +0530
 Subject: [PATCH 1/1] New interface for ThunderNanoServices
@@ -12,11 +12,11 @@ Signed-off-by: Suman Rapolu <suman.rapolu@soctronics.com>
 ---
  Makefile.in       |  18 ++-
  configure.ac      |   3 +
- libdropbear.h     |  28 +++++
+ libdropbear.h     |  27 +++++
  libdropbear.pc.in |  11 ++
- linkedlist.h      | 169 ++++++++++++++++++++++++++
- svr-main.c        | 293 +++++++++++++++++++++++++++++++++++++++++++---
- 6 files changed, 504 insertions(+), 18 deletions(-)
+ linkedlist.h      | 169 +++++++++++++++++++++++++++
+ svr-main.c        | 288 ++++++++++++++++++++++++++++++++++++++++++++--
+ 6 files changed, 500 insertions(+), 16 deletions(-)
  create mode 100644 libdropbear.h
  create mode 100644 libdropbear.pc.in
  create mode 100644 linkedlist.h
@@ -115,10 +115,10 @@ index 893b904..f99ae67 100644
  AC_MSG_NOTICE([Using bundled libtomcrypt and libtommath])
 diff --git a/libdropbear.h b/libdropbear.h
 new file mode 100644
-index 0000000..405b034
+index 0000000..70999c9
 --- /dev/null
 +++ b/libdropbear.h
-@@ -0,0 +1,28 @@
+@@ -0,0 +1,27 @@
 +#ifndef __LIBDROPBEAR_H
 +#define __LIBDROPBEAR_H
 +
@@ -140,7 +140,6 @@ index 0000000..405b034
 +int get_active_sessions_count();
 +void get_active_sessions_info(struct client_info*, int);
 +int close_client_session(int);
-+int get_total_sessions_served();
 +
 +#ifdef __cplusplus
 +}
@@ -340,10 +339,10 @@ index 0000000..8da6057
 +#endif
 +
 diff --git a/svr-main.c b/svr-main.c
-index b274551..d9d2952 100644
+index b274551..efb60d3 100644
 --- a/svr-main.c
 +++ b/svr-main.c
-@@ -30,19 +30,44 @@
+@@ -30,19 +30,43 @@
  #include "runopts.h"
  #include "dbrandom.h"
  #include "crypto_desc.h"
@@ -372,9 +371,8 @@ index b274551..d9d2952 100644
 +
 +static int pluginActivated = 0;
 +static pthread_t threadID;
-+int served_clients = 0;
 +int server_active = 0;
-+int client_info_available = 0;
++pthread_mutex_t lock;
 +
  #ifdef INETD_MODE
  static void main_inetd(void);
@@ -389,7 +387,7 @@ index b274551..d9d2952 100644
  #if defined(DBMULTI_dropbear) || !defined(DROPBEAR_MULTI)
  #if defined(DBMULTI_dropbear) && defined(DROPBEAR_MULTI)
  int dropbear_main(int argc, char ** argv)
-@@ -75,6 +100,208 @@ int main(int argc, char ** argv)
+@@ -75,6 +99,205 @@ int main(int argc, char ** argv)
  	return -1;
  }
  #endif
@@ -408,7 +406,6 @@ index b274551..d9d2952 100644
 +           hostkeys. */
 +	commonsetup();
 +	INIT_LIST_HEAD(&client_connections_info);
-+	client_info_available = 1;
 +}
 +
 +static int setargs(char *args, char **argv)
@@ -454,36 +451,39 @@ index b274551..d9d2952 100644
 +
 +void activate_dropbear(char* string)
 +{
-+        int status;
-+	int argc;
++	int status;
++	int argc,len;
 +	char **argv;
-+	char str[100];
-+
-+	printf("recieved input=%s\n", string);
-+	memset(str, '\0', sizeof(str));
-+
-+        strncpy(str, "dropbear ", strlen("dropbear "));
-+        strncpy(str+strlen("dropbear "), string, strlen(string));
-+        printf("str = %s\n", str);
-+
-+	argv = parsedargs(str,&argc);
-+        printf("Argument count (argc) = %d\n",argc);
-+        for (int i = 0; i < argc; i++)
-+          printf("argv[%d] = %s\n", i, argv[i]);
++	char *str;
 +
 +	if(pluginActivated == 1)
 +	{
 +		printf("Plugin already Activated \n");
 +		return;
 +	}
++
++	len = strlen("dropbear ")+strlen(string)+1;
++	str=(char *)malloc(len*sizeof(char));
++	strncpy(str, "dropbear ", strlen("dropbear "));
++	strncpy(str+strlen("dropbear "), string, strlen(string)+1);
++	argv = parsedargs(str,&argc);
++	free(str);
++	/*for (int i = 0; i < argc; i++)
++		printf("argv[%d] = %s\n", i, argv[i]);*/
++
 +	init_dropbear(argc, argv);
++	freeparsedargs(argv);
++	if (pthread_mutex_init(&lock, NULL) != 0)
++	{
++		printf("\n mutex init has failed\n");
++		return;
++	}
 +	status = pthread_create(&threadID,NULL,main_noinetd,NULL);
 +	if(status != 0)
 +	{
 +		printf("Error in creating thread\n");
 +		return;
 +	}
-+	freeparsedargs(argv);
 +	printf("Plugin Activated \n");
 +	pluginActivated =1;
 +}
@@ -494,10 +494,9 @@ index b274551..d9d2952 100644
 +	{
 +		server_active = 0;
 +		pthread_join(threadID, 0);
++		pthread_mutex_destroy(&lock);
 +		pluginActivated = 0;
 +	}
-+	client_info_available = 0;
-+	served_clients =0;
 +	printf("Plugin DeActivated \n");
 +	return;
 +}
@@ -506,7 +505,7 @@ index b274551..d9d2952 100644
 +
 +int get_active_sessions_count(){
 +	int count=0;
-+	if(client_info_available){
++	if(pluginActivated){
 +		struct active_clients *client;
 +		struct list_head *ptr_list;
 +		list_for_each(ptr_list,&client_connections_info){
@@ -521,7 +520,7 @@ index b274551..d9d2952 100644
 +
 +/*To get the list of connections that are currently serving*/
 +void  get_active_sessions_info(struct client_info* connected_clients,int connections_count){
-+	if(client_info_available){
++	if(pluginActivated){
 +		int count = 0;
 +		struct active_clients *client;
 +		struct list_head *ptr_list;
@@ -545,7 +544,7 @@ index b274551..d9d2952 100644
 +	int pid_existing=0;
 +	struct active_clients *client;
 +	struct list_head *ptr_list;
-+	if(client_info_available){
++	if(pluginActivated){
 +		list_for_each(ptr_list,&client_connections_info){
 +			client = list_entry(ptr_list,struct active_clients,client_list);
 +			if(client && (client->info.pid == client_pid)){
@@ -571,13 +570,9 @@ index b274551..d9d2952 100644
 +	}
 +}
 +
-+/* total number of connections are srved till now*/
-+int get_total_sessions_served(){
-+	return served_clients;
-+}
 +
 +void free_client_info(){
-+	if(client_info_available){
++	if(pluginActivated){
 +		struct active_clients *client;
 +		struct list_head *ptr_list;
 +		list_for_each(ptr_list, &client_connections_info){
@@ -598,7 +593,7 @@ index b274551..d9d2952 100644
  
  #ifdef INETD_MODE
  static void main_inetd() {
-@@ -104,25 +331,21 @@ static void main_inetd() {
+@@ -104,7 +327,7 @@ static void main_inetd() {
  #endif /* INETD_MODE */
  
  #ifdef NON_INETD_MODE
@@ -607,14 +602,7 @@ index b274551..d9d2952 100644
  	fd_set fds;
  	unsigned int i, j;
  	int val;
- 	int maxsock = -1;
- 	int listensocks[MAX_LISTEN_ADDR];
- 	size_t listensockcount = 0;
--	FILE *pidfile = NULL;
-+	//FILE *pidfile = NULL;
- 
- 	int childpipes[MAX_UNAUTH_CLIENTS];
- 	char * preauth_addrs[MAX_UNAUTH_CLIENTS];
+@@ -118,11 +341,7 @@ static void main_noinetd() {
  
  	int childsock;
  	int childpipe[2];
@@ -627,7 +615,7 @@ index b274551..d9d2952 100644
  
  	/* sockets to identify pre-authenticated clients */
  	for (i = 0; i < MAX_UNAUTH_CLIENTS; i++) {
-@@ -141,6 +364,7 @@ static void main_noinetd() {
+@@ -141,6 +360,7 @@ static void main_noinetd() {
  		FD_SET(listensocks[i], &fds);
  	}
  
@@ -635,7 +623,7 @@ index b274551..d9d2952 100644
  	/* fork */
  	if (svr_opts.forkbg) {
  		int closefds = 0;
-@@ -154,6 +378,7 @@ static void main_noinetd() {
+@@ -154,6 +374,7 @@ static void main_noinetd() {
  		}
  	}
  
@@ -643,25 +631,25 @@ index b274551..d9d2952 100644
  	/* should be done after syslog is working */
  	if (svr_opts.forkbg) {
  		dropbear_log(LOG_INFO, "Running in background");
-@@ -161,13 +386,17 @@ static void main_noinetd() {
+@@ -161,6 +382,7 @@ static void main_noinetd() {
  		dropbear_log(LOG_INFO, "Not backgrounding");
  	}
  
-+#if 0
++
  	/* create a PID file so that we can be killed easily */
  	pidfile = fopen(svr_opts.pidfile, "w");
  	if (pidfile) {
- 		fprintf(pidfile, "%d\n", getpid());
+@@ -168,6 +390,9 @@ static void main_noinetd() {
  		fclose(pidfile);
  	}
-+#endif
  
++
 +	timeout.tv_sec = 5;
 +	timeout.tv_usec = 0;
  	/* incoming connection select loop */
  	for(;;) {
  
-@@ -186,11 +415,18 @@ static void main_noinetd() {
+@@ -186,11 +411,18 @@ static void main_noinetd() {
  			}
  		}
  
@@ -669,10 +657,9 @@ index b274551..d9d2952 100644
 +		val = select(maxsock+1, &fds, NULL, NULL, &timeout);
  
 -		if (exitflag) {
--			unlink(svr_opts.pidfile);
--			dropbear_exit("Terminated by signal");
 +		if (!server_active) {
-+			//unlink(svr_opts.pidfile);
+ 			unlink(svr_opts.pidfile);
+-			dropbear_exit("Terminated by signal");
 +			//dropbear_exit("Terminated by signal");
 +			/* make sure we close sockets */
 +			FD_ZERO(&fds);
@@ -684,7 +671,7 @@ index b274551..d9d2952 100644
  		}
  		
  		if (val == 0) {
-@@ -281,6 +517,20 @@ static void main_noinetd() {
+@@ -281,6 +513,21 @@ static void main_noinetd() {
  			if (fork_ret > 0) {
  
  				/* parent */
@@ -692,7 +679,6 @@ index b274551..d9d2952 100644
 +				time_t now;
 +				time(&now);
 +				struct active_clients *client;
-+				served_clients++;
 +				client = (struct active_clients *)malloc(sizeof(struct active_clients));
 +				if(!client){
 +					printf("unable to create a memory for active clients structure\n ");
@@ -701,11 +687,13 @@ index b274551..d9d2952 100644
 +				strcpy(client->info.ipaddress, remote_host);
 +				strcpy(client->info.timestamp,ctime(&now));
 +				client->info.timestamp[strlen(client->info.timestamp) - 1 ] = '\0';
++				pthread_mutex_lock(&lock);
 +				list_add_tail(&(client->client_list),&client_connections_info);
++				pthread_mutex_unlock(&lock);
  				childpipes[conn_idx] = childpipe[0];
  				m_close(childpipe[1]);
  				preauth_addrs[conn_idx] = remote_host;
-@@ -328,6 +578,7 @@ out:
+@@ -328,6 +575,7 @@ out:
  	} /* for(;;) loop */
  
  	/* don't reach here */
@@ -713,7 +701,7 @@ index b274551..d9d2952 100644
  }
  #endif /* NON_INETD_MODE */
  
-@@ -338,10 +589,24 @@ static void sigchld_handler(int UNUSED(unused)) {
+@@ -338,10 +586,26 @@ static void sigchld_handler(int UNUSED(unused)) {
  
  	const int saved_errno = errno;
  
@@ -727,7 +715,9 @@ index b274551..d9d2952 100644
 +		list_for_each(ptr_list, &client_connections_info){
 +			client  = list_entry(ptr_list,struct active_clients, client_list);
 +			if (client && client->info.pid == pid){
++				pthread_mutex_lock(&lock);
 +				list_del(ptr_list);
++				pthread_mutex_unlock(&lock);
 +				free(client);
 +				break;
 +			}
