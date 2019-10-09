@@ -1,7 +1,7 @@
-From 34c64297ef3b718b7685ec3e1f8e768f0de3dbb1 Mon Sep 17 00:00:00 2001
+From 05167c418323663498d9f7d92cce140eba070528 Mon Sep 17 00:00:00 2001
 From: Suman Rapolu <suman.rapolu@soctronics.com>
 Date: Fri, 27 Sep 2019 11:10:57 +0530
-Subject: [PATCH 1/1] New interface for ThunderNanoServices
+Subject: [PATCH] New interface for ThunderNanoServices
 
 1. Created API interface for Dropbear service
 2. Implemented Session management using linked list
@@ -14,9 +14,10 @@ Signed-off-by: Suman Rapolu <suman.rapolu@soctronics.com>
  configure.ac      |   3 +
  libdropbear.h     |  27 +++++
  libdropbear.pc.in |  11 ++
- linkedlist.h      | 169 +++++++++++++++++++++++++++
- svr-main.c        | 288 ++++++++++++++++++++++++++++++++++++++++++++--
- 6 files changed, 500 insertions(+), 16 deletions(-)
+ linkedlist.h      | 169 ++++++++++++++++++++++++++
+ svr-main.c        | 302 ++++++++++++++++++++++++++++++++++++++++++++--
+ svr-session.c     |   2 +-
+ 7 files changed, 514 insertions(+), 18 deletions(-)
  create mode 100644 libdropbear.h
  create mode 100644 libdropbear.pc.in
  create mode 100644 linkedlist.h
@@ -339,7 +340,7 @@ index 0000000..8da6057
 +#endif
 +
 diff --git a/svr-main.c b/svr-main.c
-index b274551..efb60d3 100644
+index b274551..d581dfa 100644
 --- a/svr-main.c
 +++ b/svr-main.c
 @@ -30,19 +30,43 @@
@@ -553,7 +554,7 @@ index b274551..efb60d3 100644
 +			}
 +		}
 +		if(pid_existing){
-+			if(kill(client_pid,SIGKILL)== -1){
++			if(kill(client_pid,SIGUSR1)== -1){
 +				printf("Error during close session: %s\n", strerror(errno));
 +				return errno;
 +			}
@@ -708,7 +709,7 @@ index b274551..efb60d3 100644
 -	while(waitpid(-1, NULL, WNOHANG) > 0) {}
 +	int  pid;
 +	/* disconnected ports are removing from structure List */
-+	while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) {
++	while ((pid = waitpid(0, NULL, WNOHANG)) > 0) {
 +		struct active_clients *client;
 +		struct list_head *ptr_list;
 +
@@ -730,6 +731,60 @@ index b274551..efb60d3 100644
  	sigemptyset(&sa_chld.sa_mask);
  	if (sigaction(SIGCHLD, &sa_chld, NULL) < 0) {
  		dropbear_exit("signal() error");
+@@ -361,6 +625,11 @@ static void sigintterm_handler(int UNUSED(unused)) {
+ 
+ 	exitflag = 1;
+ }
++static void sigusr1_handler(int UNUSED(unused)) {
++
++	exitflag = 1;
++}
++
+ 
+ /* Things used by inetd and non-inetd modes */
+ static void commonsetup() {
+@@ -371,7 +640,7 @@ static void commonsetup() {
+ 		startsyslog(PROGNAME);
+ 	}
+ #endif
+-
++#if 0
+ 	/* set up cleanup handler */
+ 	if (signal(SIGINT, sigintterm_handler) == SIG_ERR || 
+ #ifndef DEBUG_VALGRIND
+@@ -385,12 +654,19 @@ static void commonsetup() {
+ 	sa_chld.sa_handler = sigchld_handler;
+ 	sa_chld.sa_flags = SA_NOCLDSTOP;
+ 	sigemptyset(&sa_chld.sa_mask);
++
+ 	if (sigaction(SIGCHLD, &sa_chld, NULL) < 0) {
+ 		dropbear_exit("signal() error");
+ 	}
++#endif
++	if (signal(SIGUSR1, sigusr1_handler) == SIG_ERR) {
++		dropbear_exit("signal() error");
++	}
++#if 0 
+ 	if (signal(SIGSEGV, sigsegv_handler) == SIG_ERR) {
+ 		dropbear_exit("signal() error");
+ 	}
++#endif
+ 
+ 	crypto_init();
+ 
+diff --git a/svr-session.c b/svr-session.c
+index 4f56cd9..b0fdf6b 100644
+--- a/svr-session.c
++++ b/svr-session.c
+@@ -191,7 +191,7 @@ void svr_dropbear_exit(int exitcode, const char* format, va_list param) {
+ 		m_free(svr_opts.ports[i]);
+ 	}
+ 
+-	exit(exitcode);
++	_exit(exitcode);
+ 
+ }
+ 
 -- 
 2.17.1
 
